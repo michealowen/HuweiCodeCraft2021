@@ -15,10 +15,10 @@ namespace CodeCraft2021 {
 			//std::cout << "第" << day << "天" << std::endl;
 
 			/* 迁移 */
-			//migrate();
+			migrate();
 
 			/* 针对当天删除请求的迁移 */
-			migrate4del(day);
+			//migrate4del(day);
 
 			/* 处理当日请求 */
 			std::vector<Request> dayRequests = requestLists[day];
@@ -241,7 +241,7 @@ namespace CodeCraft2021 {
 	void migrate4del(const int day) {
 		
 		// 计算剩余迁移次数--虚拟机总数的千分之五的下界
-		int leftMigNum = (int)std::floor(VmUsed2ServerBought.size() * 0.005);
+        int leftMigNum = (int)std::floor(VmUsed2ServerBought.size() * 0.005);
 		
 		// 将服务器按照剩余空间从小到大排序
 		std::sort(ServerBoughtList.begin(), ServerBoughtList.end(), serverBoughtFreeCapLessCmp);

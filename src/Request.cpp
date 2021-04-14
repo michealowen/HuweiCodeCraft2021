@@ -1,4 +1,4 @@
-﻿#include "../include/Request.h"
+#include "../include/Request.h"
 
 namespace CodeCraft2021 {
 

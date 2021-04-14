@@ -6,6 +6,7 @@
 #include <iterator> 
 #include <unordered_set>
 #include <algorithm>
+#include <cmath>
 // 日志保存
 #include <sstream>
 #include <assert.h>
