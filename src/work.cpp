@@ -192,7 +192,180 @@ namespace CodeCraft2021 {
 
 		// 返回迁移的虚拟机数量
 		return curMigNum;
-	}	
+	}
+
+	/**
+	 * 将一台已购买服务器上的del虚拟机迁移到另一台, 返回迁移数量
+	 */
+	 int migrateDelServerBought(ServerBought& serverBoughtFrom, ServerBought& serverBoughtTo,
+                                std::unordered_set<VmUsed*>& delVmUsedSet, int leftMigNum){
+
+        // 迁出服务器上虚拟机个数
+        int vmUsedListSz = ServerBought2VmUsed[&serverBoughtFrom].size();
+
+        // 虚拟机迁移数量
+        int curMigNum = 0;
+
+        // 将要从 ServerBoughtFrom 中移除的虚拟机
+        std::unordered_set<VmUsed*> vmUsedToDel;
+
+        for (int i = 0; i < vmUsedListSz; ++i) {
+            // 当前虚拟机
+            VmUsed& vmUsed = *(ServerBought2VmUsed[&serverBoughtFrom][i]);
+            // 若该虚拟不属于今日删除的虚拟机, continue
+            if(delVmUsedSet.find(&vmUsed) == delVmUsedSet.end())
+                continue;
+            // 虚拟机规格
+            Vm& vm = VmInfoDict[vmUsed.vmType];
+            // 当前虚拟机是否可以迁移
+            bool flag = false;
+            // 若能够迁移, 迁移到的节点
+            int toNode;
+
+            // 双节点
+            if (vmUsed.node == 2) {
+                if (std::min(serverBoughtTo.cpusizel, serverBoughtTo.cpusizer) >= vm.cpu / 2 &&
+                    std::min(serverBoughtTo.memsizel, serverBoughtTo.memsizer) >= vm.memory / 2) {
+
+                    flag = true;
+                    toNode = 2;
+                }
+            }
+            // 单节点
+            else {
+                if (serverBoughtTo.cpusizel >= vm.cpu &&
+                    serverBoughtTo.memsizel >= vm.memory) {
+
+                    flag = true;
+                    toNode = 0;
+                }
+                else if (serverBoughtTo.cpusizer >= vm.cpu &&
+                         serverBoughtTo.memsizer >= vm.memory) {
+
+                    flag = true;
+                    toNode = 1;
+                }
+            }
+
+            // 若当前虚拟机器能够迁移
+            if (flag == true) {
+                // 释放服务器资源
+                releaseResource(vmUsed, serverBoughtFrom);
+                // 将虚拟机部署在 ServerBoughtTo 上
+                VmUsed2ServerBought[&vmUsed] = &serverBoughtTo;
+                vmUsed.node = toNode;
+                ServerBought2VmUsed[&serverBoughtTo].push_back(&vmUsed);
+                consumeResource(serverBoughtTo, vmUsed, toNode);
+                // 将该虚拟机加入待删除的列表
+                vmUsedToDel.insert(&vmUsed);
+                ++curMigNum;
+                // 写入迁移信息
+                migrateInfo.push_back(MigrationInfo(vmUsed.vmId, serverBoughtTo.serverId, toNode));
+            }
+        }
+
+        // 从ServerBoughtFrom中删除这些虚拟机, 边遍历边删除
+        std::vector<VmUsed*>::iterator it = ServerBought2VmUsed[&serverBoughtFrom].begin();
+        while (it != ServerBought2VmUsed[&serverBoughtFrom].end()) {
+            if ( vmUsedToDel.find(*it)!= vmUsedToDel.end()) {
+                // 删除服务器到虚拟机的映射
+                ServerBought2VmUsed[&serverBoughtFrom].erase(it);
+            }
+            else
+                ++it;
+        }
+
+        // 返回迁移的虚拟机数量
+        return curMigNum;
+
+	 }
+
+    /**
+     * 将一台已购买服务器上的普通虚拟机迁移到另一台, 返回迁移数量
+     */
+    int migrateCommonServerBought(ServerBought& serverBoughtFrom, ServerBought& serverBoughtTo,
+                               std::unordered_set<VmUsed*>& delVmUsedSet, int leftMigNum){
+
+        // 迁出服务器上虚拟机个数
+        int vmUsedListSz = ServerBought2VmUsed[&serverBoughtFrom].size();
+
+        // 虚拟机迁移数量
+        int curMigNum = 0;
+
+        // 将要从 ServerBoughtFrom 中移除的虚拟机
+        std::unordered_set<VmUsed*> vmUsedToDel;
+
+        for (int i = 0; i < vmUsedListSz; ++i) {
+            // 当前虚拟机
+            VmUsed& vmUsed = *(ServerBought2VmUsed[&serverBoughtFrom][i]);
+            // 若该虚拟属于今日删除的虚拟机, continue
+            if(delVmUsedSet.find(&vmUsed) != delVmUsedSet.end())
+                continue;
+            // 虚拟机规格
+            Vm& vm = VmInfoDict[vmUsed.vmType];
+            // 当前虚拟机是否可以迁移
+            bool flag = false;
+            // 若能够迁移, 迁移到的节点
+            int toNode;
+
+            // 双节点
+            if (vmUsed.node == 2) {
+                if (std::min(serverBoughtTo.cpusizel, serverBoughtTo.cpusizer) >= vm.cpu / 2 &&
+                    std::min(serverBoughtTo.memsizel, serverBoughtTo.memsizer) >= vm.memory / 2) {
+
+                    flag = true;
+                    toNode = 2;
+                }
+            }
+                // 单节点
+            else {
+                if (serverBoughtTo.cpusizel >= vm.cpu &&
+                    serverBoughtTo.memsizel >= vm.memory) {
+
+                    flag = true;
+                    toNode = 0;
+                }
+                else if (serverBoughtTo.cpusizer >= vm.cpu &&
+                         serverBoughtTo.memsizer >= vm.memory) {
+
+                    flag = true;
+                    toNode = 1;
+                }
+            }
+
+            // 若当前虚拟机器能够迁移
+            if (flag == true) {
+                // 释放服务器资源
+                releaseResource(vmUsed, serverBoughtFrom);
+                // 将虚拟机部署在 ServerBoughtTo 上
+                VmUsed2ServerBought[&vmUsed] = &serverBoughtTo;
+                vmUsed.node = toNode;
+                ServerBought2VmUsed[&serverBoughtTo].push_back(&vmUsed);
+                consumeResource(serverBoughtTo, vmUsed, toNode);
+                // 将该虚拟机加入待删除的列表
+                vmUsedToDel.insert(&vmUsed);
+                ++curMigNum;
+                // 写入迁移信息
+                migrateInfo.push_back(MigrationInfo(vmUsed.vmId, serverBoughtTo.serverId, toNode));
+            }
+        }
+
+        // 从ServerBoughtFrom中删除这些虚拟机, 边遍历边删除
+        std::vector<VmUsed*>::iterator it = ServerBought2VmUsed[&serverBoughtFrom].begin();
+        while (it != ServerBought2VmUsed[&serverBoughtFrom].end()) {
+            if ( vmUsedToDel.find(*it)!= vmUsedToDel.end()) {
+                // 删除服务器到虚拟机的映射
+                ServerBought2VmUsed[&serverBoughtFrom].erase(it);
+            }
+            else
+                ++it;
+        }
+
+        // 返回迁移的虚拟机数量
+        return curMigNum;
+
+    }
+
 
 	/**
 	 * 判断已购买服务器是否为空服务器
@@ -263,9 +436,47 @@ namespace CodeCraft2021 {
 			}
 		}
 
+		// 左右指针
+		// delFrom为del虚拟机迁出的服务器, delTo为del虚拟机迁入的服务器
+        int delFrom = 0, delTo = ServerBoughtList.size() - 1;
+        // commonFrom为普通虚拟机迁出的服务器, commonTo为普通虚拟机迁入的服务器
+		int commonFrom = ServerBoughtList.size() - 1, commonTo = 0;
+
 		// 外层循环
-		while (cycleNum < 10) {
-			++cycleNum;
+		while (cycleNum < 10 && leftMigNum > 0) {
+			// 循环次数自增
+		    ++cycleNum;
+            // 内循环
+            while(delFrom < delTo &&  commonFrom > commonTo && leftMigNum > 0){
+                // del 迁出迁入服务器
+                ServerBought& delFromServerBought = *(ServerBoughtList[delFrom]);
+                ServerBought& delToServerBought = *(ServerBoughtList[delTo]);
+                // common 迁出迁入服务器
+                ServerBought& commonFromServerBought = *(ServerBoughtList[commonFrom]);
+                ServerBought& commonToServerBought = *(ServerBoughtList[commonTo]);
+
+                // 尝试将 delFrom 的del虚拟机迁移到 delTo
+                int migNum = migrateDelServerBought(delFromServerBought, delToServerBought, delVmUsedSet, leftMigNum);
+                leftMigNum -= migNum;
+                if(leftMigNum==0)
+                    break;
+                // 尝试将 commonFrom 的common虚拟机迁移到 commonTo
+                migNum = migrateCommonServerBought(commonFromServerBought, commonToServerBought, delVmUsedSet, leftMigNum);
+                leftMigNum -= migNum;
+                if(leftMigNum==0)
+                    break;
+
+                // 若当前 delFrom 中的del虚拟机迁空, 或不能迁移
+                if (serverBoughtIsFree(leftServerBought) == true) {
+                    ++left;
+                    right = ServerBoughtList.size() - 1;
+                }
+                else {
+                    --right;
+                }
+            }
+
+
 		}
 	}
 
